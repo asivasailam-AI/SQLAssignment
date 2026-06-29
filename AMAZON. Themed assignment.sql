@@ -1,0 +1,142 @@
+CREATE DATABASE Amazon_db;
+USE Amazon_db;
+-- Creating tables
+CREATE TABLE Users(
+	user_id INT PRIMARY KEY AUTO_INCREMENT,
+	name VARCHAR(100) NOT NULL,
+	email VARCHAR(150) UNIQUE NOT NULL,
+	registered_date DATE NOT NULL,
+	membership ENUM('Basic','Prime') DEFAULT 'Basic' );
+ select * from Users;   
+CREATE TABLE Products(
+	product_id INT PRIMARY KEY AUTO_INCREMENT,
+	name VARCHAR(200) NOT NULL,
+	price DECIMAL(10,2) NOT NULL,
+	category VARCHAR(100)  NOT NULL,
+	stock INT NOT NULL);    
+    select * from products;
+CREATE TABLE Orders(
+	order_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT, FOREIGN KEY (user_id)references Users(user_id),
+	order_date DATE NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL
+    );
+    select * from ORDERS;
+CREATE TABLE OrderDetails(
+	order_details INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT, FOREIGN KEY (order_id)references Orders(Order_id),
+	product_id INT, FOREIGN KEY (product_id)references Products(product_id),
+    Quantity INT NOT NULL
+    );
+select * from OrderDetails;
+
+-- 2. Insert values
+INSERT INTO Users (name, email, registered_date, membership) VALUES
+('Alice Johnson', 'alice.j@example.com', '2024-01-15', 'Prime'),
+('Bob Smith', 'bob.s@example.com', '2024-02-01', 'Basic'),
+('Charlie Brown', 'charlie.b@example.com', '2024-03-10', 'Prime'),
+('Daisy Ridley', 'daisy.r@example.com', '2024-04-12', 'Basic');
+
+INSERT INTO Products (name, price, category, stock) VALUES
+('Echo Dot', 49.99, 'Electronics', 120),
+('Kindle Paperwhite', 129.99, 'Books', 50),
+('Fire Stick', 39.99, 'Electronics', 80),
+('Yoga Mat', 19.99, 'Fitness', 200),
+('Wireless Mouse', 24.99, 'Electronics', 150);
+
+INSERT INTO Orders (user_id, order_date, total_amount) VALUES
+(1, '2024-05-01', 79.98),
+(2, '2024-05-03', 129.99),
+(1, '2024-05-04', 49.99),
+(3, '2024-05-05', 24.99);
+
+INSERT INTO OrderDetails (order_id, product_id, quantity) VALUES
+(1, 1, 2),
+(2, 2, 1),
+(3, 1, 1),
+(4, 5, 1);
+
+-- 1.List all customers who have made purchases of more than $80.
+SELECT Users.user_id, Users.name, Orders.order_id, Orders.total_amount
+FROM Users
+JOIN Orders ON Users.user_id = Orders.user_id
+WHERE Orders.total_amount > 80;
+
+-- 2. Retrieve all orders placed in the last 280 days along with the customer name and email.
+SELECT Users.user_id, Users.email, Orders.order_id,Orders.order_date,Orders.total_amount
+FROM Orders
+Join Users on Orders.user_id = Users.user_id
+WHERE Orders.order_date >= CURDATE() - INTERVAL 280 DAY;
+
+-- 3..Find the average product price for each category
+SELECT category, AVG(price) AS Average_price
+From Products
+GROUP BY category;
+
+-- 4. List all customers who have purchased a product from the category Electronics.
+SELECT Users.user_id, Users.name
+FROM Users
+JOIN Orders ON Users.user_id = Orders.user_id
+JOIN OrderDetails ON Orders.order_id = OrderDetails.order_id 
+JOIN Products ON Products.product_id = OrderDetails.product_id
+WHERE Products.category = 'Electronics';
+
+-- 5. Find the total number of products sold and the total revenue generated for each product.
+SELECT Products.product_id, Products.name,
+	SUM(OrderDetails.quantity) AS Total_Sold_product,
+    SUM(OrderDetails.quantity * Products.price) AS Total_Revenue
+FROM Products
+JOIN OrderDetails ON Products.product_id = OrderDetails.product_id
+GROUP BY Products.product_id, Products.name;
+
+-- 6. Update the price of all products in the Books category, increasing it by 10% Query
+SET SQL_SAFE_UPDATES = 0;
+UPDATE Products
+SET price = price*1.10
+WHERE category ='Books';
+SET SQL_SAFE_UPDATES = 1;
+select * from Products;
+
+-- 7. Remove all orders that were placed before 2020.
+DELETE OrderDetails
+FROM OrderDetails
+JOIN Orders ON OrderDetails.order_id = Orders.order_id
+WHERE Orders.order_date <='2020-01-01';
+
+DELETE Orders From Orders
+WHERE Orders.order_date <= '2020-01-01';
+Select * from Orders;
+
+-- 8.Write a query to fetch the order details, including customer name, product name, and quantity, for orders placed on 2024-05-01.
+SELECT Users.name AS customer_name,
+	Products.name As product_name, 
+    OrderDetails.quantity 
+FROM Orders
+JOIN Users On  Users.user_id = Orders.user_id
+JOIN OrderDetails ON Orders.order_id = OrderDetails.order_id
+JOIN Products On OrderDetails.product_id = Products.product_id
+WHERE Orders.order_date = '2024-05-01';
+
+-- 9. Fetch all customers and the total number of orders they have placed.
+SELECT Users.name As customer_name,
+	COUNT(Orders.order_id) As Total_Orders
+FROM Users
+LEFT JOIN Orders ON Users.user_id = Orders.user_id
+GROUP BY Users.user_id, Users.name;
+
+-- 10. List all customers who purchased more than 1 units of any product, including the product name and total quantity purchased.
+SELECT u.name, p.name AS product_name,
+       SUM(od.quantity) AS total_quantity
+FROM Users u
+JOIN Orders o ON u.user_id = o.user_id
+JOIN OrderDetails od ON o.order_id = od.order_id
+JOIN Products p ON od.product_id = p.product_id
+GROUP BY u.name, p.name
+HAVING SUM(od.quantity) > 1;
+
+-- 11.Find the total revenue generated by each category along with the category name.
+SELECT p.category,
+       SUM(od.quantity * p.price) AS total_revenue
+FROM Products p
+JOIN OrderDetails od ON p.product_id = od.product_id
+GROUP BY p.category;
